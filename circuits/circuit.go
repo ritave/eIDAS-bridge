@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/hash/sha2"
+	"github.com/consensys/gnark/std/math/bits"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
@@ -28,7 +29,7 @@ func AssertCertSubjectPubkey(uapi *uints.BinaryField[uints.U32], tbsCertificate 
 }
 
 func AssertCertificateSignature(uapi *uints.BinaryField[uints.U32], fullcert []uints.U8, signature []uints.U8) error {
-	if len(signature) != 102 {
+	if len(signature) != 100 {
 		return fmt.Errorf("signature length invalid")
 	}
 	for i := range signature {
@@ -38,7 +39,12 @@ func AssertCertificateSignature(uapi *uints.BinaryField[uints.U32], fullcert []u
 }
 
 func byteArrayToLimbs(api frontend.API, array []uints.U8) ([]frontend.Variable, error) {
-	ret := make([]frontend.Variable, len(array)/8)
+	ret := make([]frontend.Variable, (len(array)+7)/8)
+	ap := make([]uints.U8, 8*len(ret)-len(array))
+	for i := range ap {
+		ap[i] = uints.NewU8(0)
+	}
+	array = append(ap, array...)
 	for i := range ret {
 		ret[len(ret)-1-i] = api.Add(
 			api.Mul(1<<0, array[8*i+7].Val),
@@ -82,14 +88,38 @@ func BytesToMessage(api frontend.API, dgst []uints.U8) (*emulated.Element[p384.P
 	if err != nil {
 		return nil, fmt.Errorf("field: %w", err)
 	}
-	mb = append(mb, 0, 0)
+	nbPost := 6 - len(mb)
+	for i := 0; i < nbPost; i++ {
+		mb = append(mb, 0)
+	}
 	m := efp.NewElement(mb)
 	return m, nil
 }
 
-func SignatureToBytes(api frontend.API, signature *ecdsa.Signature[p384.P384Fr]) []uints.U8 {
+func SignatureToBytes(api frontend.API, signature *ecdsa.Signature[p384.P384Fr]) ([]uints.U8, error) {
 	// 02 31 R 02 31 S
-	panic("TODO")
+	efr, err := emulated.NewField[p384.P384Fr](api)
+	if err != nil {
+		return nil, fmt.Errorf("field %w", err)
+	}
+	uapi, err := uints.New[uints.U32](api)
+	if err != nil {
+		return nil, fmt.Errorf("uints: %w", err)
+	}
+	rbits := efr.ToBits(&signature.R)
+	sbits := efr.ToBits(&signature.S)
+	res := make([]uints.U8, 4+2*48)
+	res[0] = uints.NewU8(0x02)
+	res[1] = uints.NewU8(0x31)
+	res[50] = uints.NewU8(0x02)
+	res[51] = uints.NewU8(0x31)
+	for i := 0; i < 48; i++ {
+		rbt := bits.FromBinary(api, rbits[i*8:(i+1)*8], bits.WithUnconstrainedInputs())
+		res[2+i] = uapi.ByteValueOf(rbt)
+		sbt := bits.FromBinary(api, sbits[i*8:(i+1)*8], bits.WithUnconstrainedInputs())
+		res[50+i] = uapi.ByteValueOf(sbt)
+	}
+	return res, nil
 }
 
 type Circuit struct {
@@ -139,9 +169,12 @@ func (c *Circuit) Define(api frontend.API) error {
 	}
 	issuerKey.Verify(api, p384.GetP384Params(), dgstS, &c.CertificateSignature)
 	// 5. check that CertificateSignature is properly encoded in Certificate
-	certSig := SignatureToBytes(api, &c.CertificateSignature)
+	certSig, err := SignatureToBytes(api, &c.CertificateSignature)
+	if err != nil {
+		return fmt.Errorf("sig to bytes: %w", err)
+	}
 	if err := AssertCertificateSignature(uapi, c.Certificate[:], certSig); err != nil {
-		return err
+		return fmt.Errorf("cert sig: %w", err)
 	}
 	// 6. convert SubjectPubKey into ecdsa.PublicKey
 	subKey, err := BytesToPubkey(api, c.SubjectPubkey[:])
@@ -154,5 +187,21 @@ func (c *Circuit) Define(api frontend.API) error {
 		return fmt.Errorf("challenge: %w", err)
 	}
 	subKey.Verify(api, p384.GetP384Params(), challengeS, &c.ChallengeSignature)
+	return nil
+}
+
+// for MVP
+type FCircuit struct {
+	ChallengeSignature ecdsa.Signature[p384.P384Fr]              `gnark:",secret"`
+	SubjectPubkey      ecdsa.PublicKey[p384.P384Fp, p384.P384Fr] `gnark:",secret"`
+	Challenge          [32]uints.U8                              // signed by the smart card. Used by the smart contract to ensure liveness
+}
+
+func (c *FCircuit) Define(api frontend.API) error {
+	challengeS, err := BytesToMessage(api, c.Challenge[:])
+	if err != nil {
+		return fmt.Errorf("challenge: %w", err)
+	}
+	c.SubjectPubkey.Verify(api, p384.GetP384Params(), challengeS, &c.ChallengeSignature)
 	return nil
 }
