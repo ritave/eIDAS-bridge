@@ -62,7 +62,7 @@ func TestMarshalRound(t *testing.T) {
 	if !bytes.Equal(dd, d.Bytes) {
 		t.Fatal("not equal")
 	}
-	t.Logf("%x\n", c.TBSCertificate.PublicKey.Raw)
+	t.Logf("%x\n", c.TBSCertificate.PublicKey.PublicKey.Bytes)
 	t.Logf("%s\n", c.TBSCertificate.Subject.FullBytes)
 }
 

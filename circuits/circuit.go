@@ -33,6 +33,10 @@ func SubjectPublicKey(api frontend.API, pubkey []uints.U8) ecdsa.PublicKey[p384.
 	panic("TODO")
 }
 
+func BytesToPubkey(api frontend.API, pubkey []uints.U8) ecdsa.PublicKey[p384.P384Fp, p384.P384Fr] {
+	panic("TODO")
+}
+
 type Circuit struct {
 	Challenge [16]uints.U8 // signed by the smart card. Used by the smart contract to ensure liveness
 	Subject   [11]uints.U8 // this is used in smart contract to mint identity NFT
@@ -45,8 +49,8 @@ type Circuit struct {
 	// these we could theoretically parse from the certificate using hints
 	// in-circuit but until gnark doesn't provide hints for byte arrays do
 	// externally and only validate correctness.
-	SubjectPubkey [98]uints.U8 `gnark:",secret"`
-	IssuerPubKey  [98]uints.U8 `gnark:",secret"` // right now self-signed
+	SubjectPubkey [97]uints.U8 `gnark:",secret"`
+	IssuerPubKey  [97]uints.U8 `gnark:",secret"` // right now self-signed
 
 	CertificateSignature ecdsa.Signature[p384.P384Fr] `gnark:",secret"`
 }

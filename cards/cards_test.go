@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestGEtSigner(t *testing.T) {
+func TestGetSigner(t *testing.T) {
 	msg := []byte("test msg")
 	ctx := New("/opt/homebrew/lib/opensc-pkcs11.so", "123456")
 	tokens, err := ctx.EnumerateTokens()
