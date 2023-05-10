@@ -29,7 +29,6 @@ func TestCircuit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	circuit := &Circuit{}
 	witness := &Circuit{
 		Challenge: [16]uints.U8(uints.NewU8Array(challenge)),
@@ -47,7 +46,9 @@ func TestCircuit(t *testing.T) {
 			S: emulated.ValueOf[p384.P384Fr](ss),
 		},
 	}
+	t.Log("SNARK witness created")
 
+	t.Log("solving SNARK")
 	err = test.IsSolved(circuit, witness, ecc.BN254.ScalarField())
 	if err != nil {
 		t.Fatal(err)
@@ -57,6 +58,7 @@ func TestCircuit(t *testing.T) {
 func getSigner(t *testing.T) (*x509.Certificate, crypto.Signer) {
 	t.Helper()
 	ctx := cards.New("/opt/homebrew/lib/opensc-pkcs11.so", "123456")
+	t.Log("enumerating smart cards")
 	tokens, err := ctx.EnumerateTokens()
 	if err != nil {
 		t.Fatal(err)
@@ -65,22 +67,27 @@ func getSigner(t *testing.T) (*x509.Certificate, crypto.Signer) {
 	if len(tokens) != 1 {
 		t.Fatal("not one token")
 	}
+	t.Log("found token:", tokens[0].Label)
 	cert, _, priv, err := ctx.GetSigner(tokens[0])
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("obtained certificate")
 	return cert, priv
 }
 
 func sign(t *testing.T, signer crypto.Signer, challenge []byte) (r, s *big.Int) {
+	t.Logf("creating signature for challenge: %s", challenge)
 	signature, err := signer.Sign(nil, challenge, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("signature %x\n", signature)
 	r, s, err = cards.UnmarshalSignature(signature)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("unmarshalled signature r=%s s=%s\n", r, s)
 	return r, s
 }
 
