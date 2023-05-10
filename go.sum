@@ -8,6 +8,8 @@ github.com/consensys/bavard v0.1.13 h1:oLhMLOFGTLdlda/kma4VOJazblc7IM5y5QPd2A/Yj
 github.com/consensys/bavard v0.1.13/go.mod h1:9ItSMtA/dXMAiL7BG6bqW2m3NdSEObYWoH223nGHukI=
 github.com/consensys/gnark v0.7.2-0.20230505210025-1f50f065ec71 h1:ipA43fXGP5V6MRc87KuLsL+anjkekjvxAPUch5J5scU=
 github.com/consensys/gnark v0.7.2-0.20230505210025-1f50f065ec71/go.mod h1:m7gKUQUIMpgX7O15rFhkOltuy4Jh02vS4+RyGaihGzM=
+github.com/consensys/gnark v0.7.2-0.20230509205908-90befa5ce2f7 h1:ehsrQcRulDKEz5kbaciJziB0DdwS5TJtoC+ACGZBAKo=
+github.com/consensys/gnark v0.7.2-0.20230509205908-90befa5ce2f7/go.mod h1:aUAITtb8GNWhpsKjBKQttA+KhQox4omuCPvyJXHUASw=
 github.com/consensys/gnark-crypto v0.11.1-0.20230505203810-d11bbde7881b h1:TZNIR/qAAR04IumwJPY2R1ILu9QOfvYLRrlA/oJYsk0=
 github.com/consensys/gnark-crypto v0.11.1-0.20230505203810-d11bbde7881b/go.mod h1:6C2ytC8zmP8uH2GKVfPOjf0Vw3KwMAaUxlCPK5WQqmw=
 github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=

@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/ThalesIgnite/crypto11 v1.2.5
-	github.com/consensys/gnark v0.7.2-0.20230505210025-1f50f065ec71
+	github.com/consensys/gnark v0.7.2-0.20230509205908-90befa5ce2f7
 	github.com/consensys/gnark-crypto v0.11.1-0.20230505203810-d11bbde7881b
 	github.com/miekg/pkcs11 v1.0.3-0.20190429190417-a667d056470f
 	golang.org/x/crypto v0.6.0
