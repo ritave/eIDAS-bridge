@@ -1,0 +1,3 @@
+[submodule "node/fox-animation"]
+	path = node/fox-animation
+	url = git@github.com:eriknson/fox-animation.git

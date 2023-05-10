@@ -1,25 +1,34 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { configureChains, createConfig, mainnet, WagmiConfig } from "wagmi";
+import { infuraProvider } from "wagmi/providers/infura";
+
+import { publicProvider } from "@wagmi/core/providers/public";
+import { MetaMaskConnector } from "wagmi/connectors/metaMask";
+import { Interface } from "./Interface";
+
+const { chains, publicClient, webSocketPublicClient } = configureChains(
+  [mainnet],
+  [
+    infuraProvider({ apiKey: process.env.REACT_APP_INFURA_ID! }),
+    publicProvider(),
+  ]
+);
+
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors: [
+    new MetaMaskConnector({
+      chains,
+    }),
+  ],
+  publicClient,
+  webSocketPublicClient,
+});
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <WagmiConfig config={wagmiConfig}>
+      <Interface />
+    </WagmiConfig>
   );
 }
 
