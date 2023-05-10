@@ -11,7 +11,7 @@ import (
 	"github.com/ritave/eIDAS-bridge/p384"
 )
 
-func AssertCertSubjectPubkey(uapi *uints.BinaryField[uints.U32], certificate []uints.U8, subject []uints.U8, pubkey []uints.U8) error {
+func AssertCertSubjectPubkey(uapi *uints.BinaryField[uints.U32], tbsCertificate []uints.U8, subject []uints.U8, pubkey []uints.U8) error {
 	if len(subject) != 11 {
 		return fmt.Errorf("subject length invalid")
 	}
@@ -19,10 +19,10 @@ func AssertCertSubjectPubkey(uapi *uints.BinaryField[uints.U32], certificate []u
 		return fmt.Errorf("pubkey length invalid")
 	}
 	for i := range subject {
-		uapi.ByteAssertEq(certificate[132+i], subject[i])
+		uapi.ByteAssertEq(tbsCertificate[132+i], subject[i])
 	}
 	for i := range pubkey {
-		uapi.ByteAssertEq(certificate[197+i], pubkey[i]) // or 201?
+		uapi.ByteAssertEq(tbsCertificate[197+i], pubkey[i])
 	}
 	return nil
 }
@@ -38,12 +38,9 @@ func AssertCertificateSignature(uapi *uints.BinaryField[uints.U32], fullcert []u
 }
 
 func byteArrayToLimbs(api frontend.API, array []uints.U8) ([]frontend.Variable, error) {
-	if len(array) != 48 {
-		return nil, fmt.Errorf("input not 48")
-	}
-	ret := make([]frontend.Variable, 6)
+	ret := make([]frontend.Variable, len(array)/8)
 	for i := range ret {
-		ret[5-i] = api.Add(
+		ret[len(ret)-1-i] = api.Add(
 			api.Mul(1<<0, array[8*i+7].Val),
 			api.Mul(1<<8, array[8*i+6].Val),
 			api.Mul(1<<16, array[8*i+5].Val),
@@ -76,8 +73,18 @@ func BytesToPubkey(api frontend.API, pubkey []uints.U8) (*ecdsa.PublicKey[p384.P
 	return &pub, nil
 }
 
-func BytesToMessage(api frontend.API, dgst []uints.U8) *emulated.Element[p384.P384Fr] {
-	panic("TODO")
+func BytesToMessage(api frontend.API, dgst []uints.U8) (*emulated.Element[p384.P384Fr], error) {
+	mb, err := byteArrayToLimbs(api, dgst)
+	if err != nil {
+		return nil, fmt.Errorf("mb: %w", err)
+	}
+	efp, err := emulated.NewField[p384.P384Fr](api)
+	if err != nil {
+		return nil, fmt.Errorf("field: %w", err)
+	}
+	mb = append(mb, 0, 0)
+	m := efp.NewElement(mb)
+	return m, nil
 }
 
 func SignatureToBytes(api frontend.API, signature *ecdsa.Signature[p384.P384Fr]) []uints.U8 {
@@ -111,12 +118,12 @@ func (c *Circuit) Define(api frontend.API) error {
 	// 0. assert that TBS is correctly extracted from X509
 	// 1. assert that subject and pub key bytes are in TBS certificate at correct locations
 	if err := AssertCertSubjectPubkey(uapi, c.TBSCertificate[:], c.Subject[:], c.SubjectPubkey[:]); err != nil {
-		return err
+		return fmt.Errorf("assert cert: %w", err)
 	}
 	// 2. convert IssuerPubKey into ecdsa.PublicKey
 	issuerKey, err := BytesToPubkey(api, c.IssuerPubKey[:])
 	if err != nil {
-		return err
+		return fmt.Errorf("issuer key: %w", err)
 	}
 	// 3. hash TBSCertificate with SHA256 to get digest
 	hasher, err := sha2.New(api)
@@ -126,7 +133,10 @@ func (c *Circuit) Define(api frontend.API) error {
 	hasher.Write(c.TBSCertificate[:])
 	dgst := hasher.Sum()
 	// 4. check that digest verifies with CertificateSignature
-	dgstS := BytesToMessage(api, dgst)
+	dgstS, err := BytesToMessage(api, dgst)
+	if err != nil {
+		return fmt.Errorf("dgst msg: %w", err)
+	}
 	issuerKey.Verify(api, p384.GetP384Params(), dgstS, &c.CertificateSignature)
 	// 5. check that CertificateSignature is properly encoded in Certificate
 	certSig := SignatureToBytes(api, &c.CertificateSignature)
@@ -136,10 +146,13 @@ func (c *Circuit) Define(api frontend.API) error {
 	// 6. convert SubjectPubKey into ecdsa.PublicKey
 	subKey, err := BytesToPubkey(api, c.SubjectPubkey[:])
 	if err != nil {
-		return err
+		return fmt.Errorf("subkey: %w", err)
 	}
 	// 7. check that Challenge verifies with SubjectPubKey and ChallengeSignature
-	challengeS := BytesToMessage(api, c.Challenge[:])
+	challengeS, err := BytesToMessage(api, c.Challenge[:])
+	if err != nil {
+		return fmt.Errorf("challenge: %w", err)
+	}
 	subKey.Verify(api, p384.GetP384Params(), challengeS, &c.ChallengeSignature)
 	return nil
 }
