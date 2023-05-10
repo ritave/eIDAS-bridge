@@ -1,6 +1,6 @@
 # eIDAS-bridge
 
-## Local build
+## Dependencies
 
 ```
 brew install openssl yubico-piv-tool opensc pcsc-lite
