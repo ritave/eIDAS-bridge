@@ -29,6 +29,8 @@ func TestCircuit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	subPubkey := crt.TBSCertificate.PublicKey.PublicKey.Bytes
+	issPubkey := crt.TBSCertificate.PublicKey.PublicKey.Bytes // selfsigned
 	circuit := &Circuit{}
 	witness := &Circuit{
 		Challenge: [16]uints.U8(uints.NewU8Array(challenge)),
@@ -39,8 +41,8 @@ func TestCircuit(t *testing.T) {
 		},
 		Certificate:    [502]uints.U8(uints.NewU8Array(stdcert.Raw)),
 		TBSCertificate: [379]uints.U8(uints.NewU8Array(crt.TBSCertificate.Raw)),
-		SubjectPubkey:  [97]uints.U8(uints.NewU8Array(crt.TBSCertificate.PublicKey.PublicKey.Bytes)),
-		IssuerPubKey:   [97]uints.U8(uints.NewU8Array(crt.TBSCertificate.PublicKey.PublicKey.Bytes)),
+		SubjectPubkey:  [97]uints.U8(uints.NewU8Array(subPubkey)),
+		IssuerPubKey:   [97]uints.U8(uints.NewU8Array(issPubkey)),
 		CertificateSignature: ecdsa.Signature[p384.P384Fr]{
 			R: emulated.ValueOf[p384.P384Fr](rr),
 			S: emulated.ValueOf[p384.P384Fr](ss),

@@ -19,10 +19,10 @@ func AssertCertSubjectPubkey(uapi *uints.BinaryField[uints.U32], certificate []u
 		return fmt.Errorf("pubkey length invalid")
 	}
 	for i := range subject {
-		uapi.ByteAssertEq(certificate[136+i], subject[i])
+		uapi.ByteAssertEq(certificate[132+i], subject[i])
 	}
 	for i := range pubkey {
-		uapi.ByteAssertEq(certificate[201+i], pubkey[i]) // or 201?
+		uapi.ByteAssertEq(certificate[197+i], pubkey[i]) // or 201?
 	}
 	return nil
 }
@@ -43,26 +43,26 @@ func byteArrayToLimbs(api frontend.API, array []uints.U8) ([]frontend.Variable, 
 	}
 	ret := make([]frontend.Variable, 6)
 	for i := range ret {
-		ret[i] = api.Add(
-			api.Mul(1<<0, array[6*i+0]),
-			api.Mul(1<<8, array[6*i+1]),
-			api.Mul(1<<16, array[6*i+2]),
-			api.Mul(1<<24, array[6*i+3]),
-			api.Mul(1<<32, array[6*i+4]),
-			api.Mul(1<<40, array[6*i+5]),
-			api.Mul(1<<48, array[6*i+6]),
-			api.Mul(1<<56, array[6*i+7]),
+		ret[5-i] = api.Add(
+			api.Mul(1<<0, array[8*i+7].Val),
+			api.Mul(1<<8, array[8*i+6].Val),
+			api.Mul(1<<16, array[8*i+5].Val),
+			api.Mul(1<<24, array[8*i+4].Val),
+			api.Mul(1<<32, array[8*i+3].Val),
+			api.Mul(1<<40, array[8*i+2].Val),
+			api.Mul(1<<48, array[8*i+1].Val),
+			api.Mul(1<<56, array[8*i+0].Val),
 		)
 	}
 	return ret, nil
 }
 
 func BytesToPubkey(api frontend.API, pubkey []uints.U8) (*ecdsa.PublicKey[p384.P384Fp, p384.P384Fr], error) {
-	xb, err := byteArrayToLimbs(api, pubkey[2:50])
+	xb, err := byteArrayToLimbs(api, pubkey[1:49])
 	if err != nil {
 		return nil, fmt.Errorf("xb: %w", err)
 	}
-	yb, err := byteArrayToLimbs(api, pubkey[50:98])
+	yb, err := byteArrayToLimbs(api, pubkey[49:97])
 	if err != nil {
 		return nil, fmt.Errorf("yb: %w", err)
 	}
@@ -108,6 +108,7 @@ func (c *Circuit) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
+	// 0. assert that TBS is correctly extracted from X509
 	// 1. assert that subject and pub key bytes are in TBS certificate at correct locations
 	if err := AssertCertSubjectPubkey(uapi, c.TBSCertificate[:], c.Subject[:], c.SubjectPubkey[:]); err != nil {
 		return err
