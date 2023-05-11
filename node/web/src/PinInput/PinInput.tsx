@@ -23,6 +23,7 @@ export function PinInput({ length, onSubmit, disabled, value }: Props) {
     } else if (myLength > pin.length) {
       setPin(pin.concat(Array(myLength - pin.length).fill("")));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, myLength]);
 
   const onInput = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {

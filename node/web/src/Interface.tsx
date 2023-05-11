@@ -81,7 +81,25 @@ export function Interface() {
   const { status: ensStatus, data: ensName } = useEnsName({ address });
   const { current, send } = useStateMachine(machineConfig);
   const onMessage = (e: MessageEvent) => {
-    const message = JSON.parse(e.data);
+    const isBigNumber = (num: number) => !Number.isSafeInteger(+num);
+    const enquoteBigNumber = (
+      jsonString: string,
+      bigNumChecker: (_: number) => boolean
+    ) =>
+      jsonString.replaceAll(
+        /([:\s\[,]*)(\d+)([\s,\]]*)/g,
+        (matchingSubstr, prefix, bigNum, suffix) =>
+          bigNumChecker(bigNum)
+            ? `${prefix}"${bigNum}"${suffix}`
+            : matchingSubstr
+      );
+
+    const message = JSON.parse(
+      enquoteBigNumber(e.data, isBigNumber),
+      (_, value) =>
+        !isNaN(value) && isBigNumber(value) ? BigInt(value) : value
+    );
+    console.log("WS, in", message);
     send(message);
   };
   const { sendJsonMessage: wsSend, readyState: wsReady } = useWebSocket(
