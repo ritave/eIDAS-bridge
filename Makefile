@@ -1,3 +1,6 @@
+contract/EIDAS.G16.sol:
+	go run cmd/contract/contract.go generate
+
 contract/Verifier.abi:
 	solc --abi contract/EIDAS.G16.sol -o build
 
