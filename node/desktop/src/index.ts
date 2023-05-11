@@ -86,18 +86,18 @@ const makeCert = () =>
 app.on("ready", async () => {
   //createWindow();
   createTray();
-  const cert = await makeCert();
+  //const cert = await makeCert();
   wsServer = new WsServer();
   server = new HttpServer();
   await Promise.all([
-    server.start({ port: 8080, public: path.join(__dirname, "web"), cert }),
-    wsServer.start({ port: 8081, cert }),
+    server.start({ port: 8080, public: path.join(__dirname, "web") }),
+    wsServer.start({ port: 8081 }),
   ]);
 
   tray.setContextMenu(
     makeTrayMenu({
-      server: `https://localhost:8080`,
-      ws: "https://localhost:8081",
+      server: `http://localhost:8080`,
+      ws: "http://localhost:8081",
     })
   );
 });

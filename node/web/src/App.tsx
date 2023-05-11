@@ -1,12 +1,19 @@
-import { configureChains, createConfig, mainnet, WagmiConfig } from "wagmi";
+import {
+  configureChains,
+  createConfig,
+  mainnet,
+  sepolia,
+  WagmiConfig,
+} from "wagmi";
 import { infuraProvider } from "wagmi/providers/infura";
 
 import { publicProvider } from "@wagmi/core/providers/public";
 import { MetaMaskConnector } from "wagmi/connectors/metaMask";
 import { Interface } from "./Interface";
+import { useHash } from "./useHash";
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
-  [mainnet],
+  [sepolia, mainnet],
   [
     infuraProvider({ apiKey: process.env.REACT_APP_INFURA_ID! }),
     publicProvider(),

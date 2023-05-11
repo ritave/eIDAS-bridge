@@ -423,7 +423,12 @@ contract Verifier {
         );
     }
 
-    function hexCodePointArrayToUint256(uint256[32] calldata input) internal pure returns (uint256) {
+/*
+    function sender() public view returns (uint256) {
+        return uint128(uint160(msg.sender));
+    }*/
+
+    function hexCodePointArrayToUint256(uint256[32] calldata input) internal  pure returns (uint256) {
         uint256 result = 0;
         for (uint i = 0; i < 16; i++) {
             uint top = input[i * 2];
@@ -449,7 +454,7 @@ contract Verifier {
         uint256[32] calldata input
     ) public {
         require(verifyProof(a, b, c, input), "proof failed");
-        uint256 sender = uint256(uint160(msg.sender));
+        uint256 sender = uint128(uint160(msg.sender));
         uint256 challenge = hexCodePointArrayToUint256(input);
         require(sender == challenge, "wrong sender");
         verifiedIdentities[msg.sender] = true;

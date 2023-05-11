@@ -30,7 +30,6 @@ export function PinInput({ length, onSubmit, disabled, value }: Props) {
     if (value === undefined) {
       pin[index] = e.target.value;
       setPin([...pin]);
-      console.log(pin);
     }
 
     const allFilled = pin.every((v) => v !== "");
