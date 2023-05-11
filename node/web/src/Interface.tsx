@@ -4,7 +4,7 @@ import { MetamaskBoxAnimation } from "./fox/MetamaskBoxAnimation";
 import { Card } from "./Card/Card";
 import GridLoader from "react-spinners/GridLoader";
 
-import { mainnet, useAccount, useEnsName } from "wagmi";
+import { mainnet, useAccount, useEnsName, useWaitForTransaction } from "wagmi";
 import { ConnectButton } from "./ConnectButton";
 import { MachineConfig, useStateMachine } from "./useStateMachine";
 import { StatusText } from "./StatusText/StatusText";
@@ -121,6 +121,7 @@ export function Interface() {
     chainId: mainnet.id,
   });
   const { current, send } = useStateMachine(machineConfig);
+
   const onMessage = (e: MessageEvent) => {
     //const isBigNumber = (num: number) => !Number.isSafeInteger(+num);
     const yes = (..._: any[]) => true;

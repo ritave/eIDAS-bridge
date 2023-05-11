@@ -34,23 +34,27 @@ export function useStateMachine<
   });
   const send = useCallback(
     (event: string | Event) => {
-      const myEvent: any = typeof event === "string" ? { id: event } : event;
-      const transition = config.states[current.id].on[myEvent.id];
-      if (transition === undefined) {
-        console.error(
-          `Invalid transition from state "${current.id}" on event "${event}"`
-        );
-      } else {
+      setCurrent((state) => {
+        const myEvent: any = typeof event === "string" ? { id: event } : event;
+        const transition = config.states[state.id].on[myEvent.id];
+        if (transition === undefined) {
+          throw new Error(
+            `Invalid transition from state "${state.id}" on event "${event}"`
+          );
+        }
         const coercedTransition =
           typeof transition === "string" ? { target: transition } : transition;
         coercedTransition.actions?.forEach((action) =>
-          action(current.context, myEvent)
+          action(state.context, myEvent)
         );
-        const next = { id: coercedTransition.target, context: current.context };
-        setCurrent(next);
-      }
+        const next = {
+          id: coercedTransition.target,
+          context: state.context,
+        };
+        return next;
+      });
     },
-    [config, current]
+    [config]
   );
   return { current, send };
 }
