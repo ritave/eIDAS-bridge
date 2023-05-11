@@ -194,7 +194,7 @@ func (c *Circuit) Define(api frontend.API) error {
 type FCircuit struct {
 	ChallengeSignature ecdsa.Signature[p384.P384Fr]              `gnark:",secret"`
 	SubjectPubkey      ecdsa.PublicKey[p384.P384Fp, p384.P384Fr] `gnark:",secret"`
-	Challenge          [32]uints.U8                              // signed by the smart card. Used by the smart contract to ensure liveness
+	Challenge          [32]uints.U8                              `gnark:",public"` // signed by the smart card. Used by the smart contract to ensure liveness
 }
 
 func (c *FCircuit) Define(api frontend.API) error {
