@@ -48,36 +48,21 @@ func main() {
 		return
 	}
 	defer fccs.Close()
-	ccs := groth16.NewCS(ecc.BN254)
-	_, err = ccs.ReadFrom(fccs)
-	if err != nil {
-		fmt.Println("CCS", err)
-		return
-	}
+
 	fpk, err := os.Open(pkLoc)
 	if err != nil {
 		fmt.Println("PKF", err)
 		return
 	}
 	defer fpk.Close()
-	pk := groth16.NewProvingKey(ecc.BN254)
-	_, err = pk.ReadFrom(fpk)
-	if err != nil {
-		fmt.Println("PK", err)
-		return
-	}
+
 	fvk, err := os.Open(vkLoc)
 	if err != nil {
 		fmt.Println("VKF", err)
 		return
 	}
 	defer fvk.Close()
-	vk := groth16.NewVerifyingKey(ecc.BN254)
-	_, err = vk.ReadFrom(fvk)
-	if err != nil {
-		fmt.Println("VK", err)
-		return
-	}
+
 	ctx := cards.New(libLoc, "")
 
 	for {
@@ -137,6 +122,24 @@ func main() {
 		},
 	}
 	copy(assignment.Challenge[:], uints.NewU8Array(challengebts))
+	ccs := groth16.NewCS(ecc.BN254)
+	_, err = ccs.ReadFrom(fccs)
+	if err != nil {
+		fmt.Println("CCS", err)
+		return
+	}
+	pk := groth16.NewProvingKey(ecc.BN254)
+	_, err = pk.ReadFrom(fpk)
+	if err != nil {
+		fmt.Println("PK", err)
+		return
+	}
+	vk := groth16.NewVerifyingKey(ecc.BN254)
+	_, err = vk.ReadFrom(fvk)
+	if err != nil {
+		fmt.Println("VK", err)
+		return
+	}
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		fmt.Println(err)
