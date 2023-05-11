@@ -16,11 +16,15 @@ export class VerifyController extends EventEmitter {
 
     console.log("verify start");
 
-    const bin = path.join(__dirname, "signer.bin");
-    console.log("verify, starting", bin);
+    const cwd = path.resolve(__dirname, "crypto");
+    const bin = path.join(cwd, "bridge.bin");
+    const args =
+      "-pkey EIDAS.G16.pk -system EIDAS.G16.ccs -vkey EIDAS.G16.vk".split(" ");
+    console.log("verify, starting", bin, args);
 
-    this.child = spawn(bin, {
+    this.child = spawn(bin, args, {
       windowsHide: true,
+      cwd,
     });
     readline
       .createInterface({ input: this.child.stdout, terminal: false })

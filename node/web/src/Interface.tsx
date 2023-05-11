@@ -143,10 +143,14 @@ export function Interface() {
             subText="Enter your qualified signature PIN"
           />
           <PinInput
-            length={4}
+            length={6}
             onSubmit={(pin) => {
               send({ id: "ENTERED", pin });
-              wsSend({ id: "SIGN", pin, challenge: address });
+              wsSend({
+                id: "SIGN",
+                pin,
+                challenge: address?.slice(2, 34), // we can only do 32 byte challenge proofs for now
+              });
             }}
           />
         </>
@@ -159,7 +163,7 @@ export function Interface() {
             main="Communicating with ID"
             subText="Communicating with your ID to confirm your identity"
           />
-          <PinInput length={4} disabled={true} value={current.context?.pin} />
+          <PinInput length={6} disabled={true} value={current.context?.pin} />
         </>
       );
       break;

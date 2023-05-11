@@ -40,8 +40,8 @@ export const mainConfig: Configuration = {
       patterns: [
         path.resolve(__dirname, "src/assets/img/faviconTemplate.png"),
         path.resolve(__dirname, "src/assets/img/faviconTemplate@2x.png"),
+        { from: path.resolve(__dirname, "src/assets/crypto"), to: "crypto" },
         { from: path.resolve(__dirname, "../web/build"), to: "web" },
-        { from: path.resolve(__dirname, "../mock/hello"), to: "signer.bin" },
       ],
     }),
   ],
