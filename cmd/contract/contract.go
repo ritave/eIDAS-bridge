@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	stdcrypto "crypto"
+	stdecdsa "crypto/ecdsa"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"math/big"
@@ -12,13 +15,19 @@ import (
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/std/math/emulated"
+	"github.com/consensys/gnark/std/math/uints"
+	"github.com/consensys/gnark/std/signature/ecdsa"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ritave/eIDAS-bridge/cards"
 	"github.com/ritave/eIDAS-bridge/circuits"
+	"github.com/ritave/eIDAS-bridge/p384"
 	"github.com/ritave/eIDAS-bridge/verifier"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -199,13 +208,28 @@ func setup() (*ethVerifier, error) {
 }
 
 func run(ev *ethVerifier) error {
-	n := 15
-	// p, q := 3, 5
-	assignment := circuits.FCircuit{
-		// X: p,
-		// Y: q,
-		// Z: n,
+	challenge := []byte("test.eth")
+	_, pub, signer, err := getSigner()
+	if err != nil {
+		return fmt.Errorf("get signer: %w", err)
 	}
+	r, s, err := sign(signer, challenge)
+	if err != nil {
+		return fmt.Errorf("sign: %w", err)
+	}
+	// circuit := &FCircuit{}
+	assignment := circuits.FCircuit{
+		Challenge: [32]uints.U8(uints.NewU8Array(make([]uint8, 32))),
+		ChallengeSignature: ecdsa.Signature[p384.P384Fr]{
+			R: emulated.ValueOf[p384.P384Fr](r),
+			S: emulated.ValueOf[p384.P384Fr](s),
+		},
+		SubjectPubkey: ecdsa.PublicKey[p384.P384Fp, p384.P384Fr]{
+			X: emulated.ValueOf[p384.P384Fp](pub.X),
+			Y: emulated.ValueOf[p384.P384Fp](pub.Y),
+		},
+	}
+	copy(assignment.Challenge[:], uints.NewU8Array(challenge))
 
 	// witness creation
 	witness, err := frontend.NewWitness(&assignment, curve.ScalarField())
@@ -239,7 +263,7 @@ func run(ev *ethVerifier) error {
 		a     [2]*big.Int
 		b     [2][2]*big.Int
 		c     [2]*big.Int
-		input [1]*big.Int
+		input [32]*big.Int
 	)
 
 	// proof.Ar, proof.Bs, proof.Krs
@@ -253,7 +277,9 @@ func run(ev *ethVerifier) error {
 	c[1] = new(big.Int).SetBytes(proofBytes[fpSize*7 : fpSize*8])
 
 	// public witness
-	input[0] = new(big.Int).SetUint64(uint64(n))
+	for i := range assignment.Challenge {
+		input[i] = new(big.Int).SetUint64(uint64(assignment.Challenge[i].Val.(uint8)))
+	}
 
 	// call the contract
 	res, err := ev.verifierContract.VerifyProof(nil, a, b, c, input)
@@ -276,4 +302,44 @@ func run(ev *ethVerifier) error {
 		return fmt.Errorf("should have failed")
 	}
 	return nil
+}
+
+func getSigner() (*x509.Certificate, *stdecdsa.PublicKey, stdcrypto.Signer, error) {
+	ctx := cards.New("/opt/homebrew/lib/opensc-pkcs11.so", "123456")
+	slog.Info("enumerating smart cards")
+	tokens, err := ctx.EnumerateTokens()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("enumerate: %w", err)
+	}
+	for i := range tokens {
+		slog.Info("found token:", tokens[i].Label, tokens[i].Serial)
+	}
+	tokens = ctx.FilterTokens("", tokens)
+	if len(tokens) != 1 {
+		return nil, nil, nil, fmt.Errorf("not one token")
+	}
+	slog.Info("chosen token:", tokens[0].Label)
+	cert, pub, priv, err := ctx.GetSigner(tokens[0])
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("get signer: %w", err)
+	}
+	slog.Info("obtained certificate: %s", cert.Subject.CommonName)
+	slog.Info("pubkey 04%x%x\n", pub.X, pub.Y)
+	return cert, pub, priv, nil
+}
+
+func sign(signer stdcrypto.Signer, challenge []byte) (r, s *big.Int, err error) {
+	slog.Info("creating signature for challenge: %s", challenge)
+	challenge = append(challenge, make([]byte, 32-len(challenge))...)
+	signature, err := signer.Sign(nil, challenge, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sign %w", err)
+	}
+	slog.Info("signature %x\n", signature)
+	r, s, err = cards.UnmarshalSignature(signature)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unmarshal %w", err)
+	}
+	slog.Info("unmarshalled signature r=%s s=%s\n", r, s)
+	return r, s, nil
 }
