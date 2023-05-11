@@ -130,3 +130,7 @@ dist
 .pnp.*
 
 .DS_Store
+
+# Identity card certificates
+cert.pem
+pubkey.pem
