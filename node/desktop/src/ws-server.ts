@@ -3,6 +3,7 @@ import https from "https";
 import assert from "assert";
 import { WebSocket, WebSocketServer } from "ws";
 import { promisify } from "util";
+import { VerifyController } from "./verify-controller";
 
 type InputMessage =
   | { id: "LINK" }
@@ -59,26 +60,38 @@ export class WsServer {
 
     this.wss.on("connection", (ws) => {
       console.log("WS, connection");
+      const verify = new VerifyController();
+      verify.on("out", async (data) => {
+        console.log("ws, out:", data);
+        await send(ws, data as any);
+      });
+
       ws.on("error", console.error);
+
       ws.on("message", async (data) => {
         const message: InputMessage = JSON.parse(data.toString());
         console.log("WS, Received", message);
         switch (message.id) {
           case "LINK":
+            verify.start();
+            /*
             await delay(HACK_DELAY_MS);
-            send(ws, { id: "INSERTED" });
+            send(ws, { id: "INSERTED" });*/
             break;
           case "SIGN":
             console.log(
               `SIGN, pin: ${message.pin}, challenge: ${message.challenge}`
             );
+            verify.send(message.pin);
+            verify.send(message.challenge);
+            /*
             await delay(HACK_DELAY_MS);
             await send(ws, { id: "SIGNED" });
             await delay(HACK_DELAY_MS);
             await send(ws, {
               id: "GENERATED",
               proof: `{ response: "foobar - ${message.pin} - ${message.challenge}" }`,
-            });
+            });*/
             break;
         }
       });

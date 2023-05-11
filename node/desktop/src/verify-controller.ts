@@ -1,41 +1,46 @@
 import EventEmitter from "events";
 import assert from "assert";
-export type Status =
-  | "inactive"
-  | "waitingForCard"
-  | "talkingCard"
-  | "generatingProof";
+import { spawn, ChildProcessWithoutNullStreams } from "child_process";
+import path from "path";
+import readline from "readline";
+import util from "util";
 
-const StateMachine: {
-  initial: string;
-  states: Record<string, { on: Record<string, string> }>;
-} = {
-  initial: "inactive",
-  states: {
-    inactive: { on: { next: "waitingForCard", reset: "inactive" } },
-    waitingForCard: { on: { next: "talkingToCard", reset: "inactive" } },
-    talkingToCard: { on: { next: "generatingProof", reset: "inactive" } },
-    generatingProof: { on: { next: "inactive", reset: "inactive" } },
-  },
-} as const;
+export declare interface VerifyController {
+  on(event: "out", listener: (data: object) => void): this;
+}
 
 export class VerifyController extends EventEmitter {
-  #state: string = StateMachine.initial;
-  #data: any = undefined;
+  child: ChildProcessWithoutNullStreams | null;
 
-  get state() {
-    return this.#state;
-  }
-  get data() {
-    return this.#data;
+  start() {
+    this.kill();
+
+    console.log("verify start");
+
+    const bin = path.join(__dirname, "signer.bin");
+    console.log("verify, starting", bin);
+
+    this.child = spawn(bin, {
+      windowsHide: true,
+    });
+    readline
+      .createInterface({ input: this.child.stdout, terminal: false })
+      .on("line", (line) => {
+        console.log("Verify, line:", line, typeof line);
+        console.log(util.inspect(line, true, Infinity, true));
+        this.emit("out", JSON.parse(line));
+      });
   }
 
-  private send(event: string, data?: any) {
-    const nextState: string | undefined =
-      StateMachine.states[this.#state].on[event];
-    assert(nextState !== undefined);
-    this.emit("transition", nextState, this.#state, data);
-    this.#state = nextState;
-    this.#data = data;
+  send(data: string) {
+    console.log("verify send:", data);
+    assert(this.child !== null);
+    this.child.stdin.write(`${data}\n`);
+  }
+
+  kill() {
+    console.log("verify kill");
+    this.child?.kill();
+    this.child = null;
   }
 }
