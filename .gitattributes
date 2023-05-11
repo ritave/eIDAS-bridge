@@ -1,0 +1,4 @@
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.G16.ccs filter=lfs diff=lfs merge=lfs -text
+*.G16.pk filter=lfs diff=lfs merge=lfs -text
+*.G16.vk filter=lfs diff=lfs merge=lfs -text
