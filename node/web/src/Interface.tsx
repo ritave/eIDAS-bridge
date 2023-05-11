@@ -4,7 +4,7 @@ import { MetamaskBoxAnimation } from "./fox/MetamaskBoxAnimation";
 import { Card } from "./Card/Card";
 import GridLoader from "react-spinners/GridLoader";
 
-import { useAccount, useEnsName } from "wagmi";
+import { mainnet, useAccount, useEnsName } from "wagmi";
 import { ConnectButton } from "./ConnectButton";
 import { MachineConfig, useStateMachine } from "./useStateMachine";
 import { StatusText } from "./StatusText/StatusText";
@@ -14,20 +14,36 @@ import { FoxButton } from "./FoxButton/FoxButton";
 import { PinInput } from "./PinInput/PinInput";
 import { useWebSocket } from "react-use-websocket/dist/lib/use-websocket";
 import { ReadyState } from "react-use-websocket/dist/lib/constants";
+import { sepolia, writeContract, waitForTransaction } from "@wagmi/core";
+import { DEPLOY, METADATA } from "./contract";
+
+type Proof = {
+  A: [bigint, bigint];
+  B: [[bigint, bigint], [bigint, bigint]];
+  C: [bigint, bigint];
+  Input: [bigint];
+};
 
 type EnteredEvent = { id: "ENTERED"; pin: string };
+type GeneratedEvent = { id: "GENERATED"; proof: Proof };
+type VerifyEvent = { id: "VERIFY"; hash: string };
 
 type Event =
   | { id: "LINK" }
   | { id: "INSERTED" }
   | EnteredEvent
   | { id: "SIGNING" }
-  | { id: "GENERATED" }
-  | { id: "VERIFY" }
+  | GeneratedEvent
+  | VerifyEvent
   | { id: "VERIFYING" }
   | { id: "DISPLAY" };
 
-type Context = { pin?: string; proof?: string; upperText?: string };
+type Context = {
+  pin?: string;
+  proof?: Proof;
+  upperText?: string;
+  hash?: string;
+};
 
 const machineConfig: MachineConfig<Event, Context> = {
   initial: "display",
@@ -59,8 +75,30 @@ const machineConfig: MachineConfig<Event, Context> = {
         },
       },
     },
-    generatingProof: { on: { GENERATED: "verify" } },
-    verify: { on: { SUBMIT: "verifying" } },
+    generatingProof: {
+      on: {
+        GENERATED: {
+          target: "verify",
+          actions: [
+            (context, event) => {
+              context.proof = (event as GeneratedEvent).proof;
+            },
+          ],
+        },
+      },
+    },
+    verify: {
+      on: {
+        VERIFY: {
+          target: "verifying",
+          actions: [
+            (context, event) => {
+              context.hash = (event as VerifyEvent).hash;
+            },
+          ],
+        },
+      },
+    },
     verifying: {
       on: {
         VERIFIED: {
@@ -78,10 +116,14 @@ const machineConfig: MachineConfig<Event, Context> = {
 
 export function Interface() {
   const { address, isConnected } = useAccount();
-  const { status: ensStatus, data: ensName } = useEnsName({ address });
+  const { status: ensStatus, data: ensName } = useEnsName({
+    address,
+    chainId: mainnet.id,
+  });
   const { current, send } = useStateMachine(machineConfig);
   const onMessage = (e: MessageEvent) => {
-    const isBigNumber = (num: number) => !Number.isSafeInteger(+num);
+    //const isBigNumber = (num: number) => !Number.isSafeInteger(+num);
+    const yes = (..._: any[]) => true;
     const enquoteBigNumber = (
       jsonString: string,
       bigNumChecker: (_: number) => boolean
@@ -94,10 +136,8 @@ export function Interface() {
             : matchingSubstr
       );
 
-    const message = JSON.parse(
-      enquoteBigNumber(e.data, isBigNumber),
-      (_, value) =>
-        !isNaN(value) && isBigNumber(value) ? BigInt(value) : value
+    const message = JSON.parse(enquoteBigNumber(e.data, yes), (_, value) =>
+      !isNaN(value) && yes(value) ? BigInt(value) : value
     );
     console.log("WS, in", message);
     send(message);
@@ -108,7 +148,7 @@ export function Interface() {
   );
 
   // hacky hack of hackiness
-  useEffect(() => {
+  /*   useEffect(() => {
     let handle: any = undefined;
 
     if (["verifying"].includes(current.id)) {
@@ -118,7 +158,7 @@ export function Interface() {
     }
 
     return () => clearTimeout(handle);
-  }, [current, send]);
+  }, [current, send]); */
 
   const isLoading =
     ensStatus === "loading" ||
@@ -200,7 +240,20 @@ export function Interface() {
       sub = (
         <FoxButton
           content={<>Verify on-chain</>}
-          onClick={() => send("SUBMIT")}
+          onClick={async () => {
+            const { A, B, C, Input } = current.context.proof!;
+
+            const { hash } = await writeContract({
+              address: DEPLOY.sepolia,
+              abi: METADATA.output.abi,
+              functionName: "identityVerification",
+              chainId: sepolia.id,
+              args: [A, B, C, Input as any],
+            });
+            send({ id: "VERIFY", hash });
+            await waitForTransaction({ chainId: sepolia.id, hash });
+            send("VERIFIED");
+          }}
         />
       );
       break;
