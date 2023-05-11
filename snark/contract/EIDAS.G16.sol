@@ -182,6 +182,8 @@ contract Verifier {
 
     using Pairing for *;
 
+    mapping(address => bool) public verifiedIdentities;
+
     uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant PRIME_Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
@@ -419,5 +421,21 @@ contract Verifier {
             proof.C,
             vk.delta2
         );
+    }
+
+    function identityVerification(
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[32] calldata input
+    ) public {
+        require(verifyProof(a, b, c, input), "proof failed");
+        verifiedIdentities[msg.sender] = true;
+    }
+
+    function isVerified(
+        address acc
+    ) public view returns (bool r) {
+        return verifiedIdentities[acc];
     }
 }
