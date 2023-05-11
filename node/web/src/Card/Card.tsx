@@ -1,4 +1,5 @@
 /* eslint-disable jsx-a11y/alt-text */
+import { useEffect, useRef } from "react";
 import "./Card.scss";
 import chip from "./chip.svg";
 import connectivity from "./connectivity.svg";
@@ -7,13 +8,48 @@ import fox from "./fox.svg";
 export type Props = {
   upperText?: string;
   ens?: string;
-  rotate?: boolean;
   float?: boolean;
+  trackMouse?: boolean;
 };
 
-export function Card({ ens, rotate, upperText, float }: Props) {
+const CONSTRAINT = 400;
+
+export function Card({ ens, upperText, float, trackMouse }: Props) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onMouseMove = (event: MouseEvent) => {
+      const x = event.clientX;
+      const y = event.clientY;
+
+      window.requestAnimationFrame(() => {
+        const el = cardRef.current;
+
+        if (!el) {
+          return;
+        }
+        const box = el.getBoundingClientRect();
+
+        const calcX = -(y - box.y - box.height / 2) / CONSTRAINT;
+        const calcY = (x - box.x - box.width / 2) / CONSTRAINT;
+
+        const transform = `perspective(50px)
+                           rotateX(${calcX}deg)
+                           rotateY(${calcY}deg)`;
+
+        el.style.transform = transform;
+      });
+    };
+
+    if (trackMouse) {
+      window.addEventListener("mousemove", onMouseMove);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+    };
+  }, [trackMouse]);
   let result = (
-    <div className="card">
+    <div className="card" ref={cardRef}>
       <p className="upper-text">{upperText}</p>
       <div className="chip-group">
         <img src={chip} />
@@ -25,9 +61,6 @@ export function Card({ ens, rotate, upperText, float }: Props) {
   );
   if (float) {
     result = <div className="float">{result}</div>;
-  }
-  if (rotate) {
-    result = <div className="rotate">{result}</div>;
   }
   return result;
 }

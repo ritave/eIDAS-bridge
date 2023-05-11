@@ -1,0 +1,19 @@
+$size: 4rem;
+
+.pinInput {
+  display: flex;
+  gap: 24px;
+}
+.pinInput > input {
+  background: #fff;
+  border-radius: 3px;
+  border: 1px solid #8f8f8f;
+  width: $size;
+  height: $size;
+  color: #000;
+  text-align: center;
+  font-size: 2.4rem;
+}
+.pinInput > input:disabled {
+  color: #8f8f8f;
+}

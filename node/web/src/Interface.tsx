@@ -11,16 +11,66 @@ import { StatusText } from "./StatusText/StatusText";
 import { useEffect, useState } from "react";
 import { Button } from "./Button/Button";
 import { FoxButton } from "./FoxButton/FoxButton";
+import { PinInput } from "./PinInput/PinInput";
 
-const machineConfig: MachineConfig = {
+type EnteredEvent = { id: "ENTERED"; pin: string };
+
+type Event =
+  | { id: "LINK" }
+  | { id: "INSERTED" }
+  | EnteredEvent
+  | { id: "SIGNING" }
+  | { id: "GENERATED" }
+  | { id: "VERIFY" }
+  | { id: "VERIFYING" }
+  | { id: "DISPLAY" };
+
+type Context = { pin?: string; proof?: string; upperText?: string };
+
+const machineConfig: MachineConfig<Event, Context> = {
   initial: "display",
+  context: {},
   states: {
-    display: { on: { link: "insertCard" } },
-    insertCard: { on: { inserted: "enterPin" } },
-    enterPin: { on: { entered: "generatingProof" } },
-    generatingProof: { on: { generated: "verify" } },
-    verify: { on: { submit: "verifying" } },
-    verifying: { on: { verified: "display" } },
+    display: { on: { LINK: "insertCard" } },
+    insertCard: { on: { INSERTED: "enterPin" } },
+    enterPin: {
+      on: {
+        ENTERED: {
+          target: "signing",
+          actions: [
+            (context, event) => {
+              context.pin = (event as EnteredEvent).pin;
+            },
+          ],
+        },
+      },
+    },
+    signing: {
+      on: {
+        SIGNED: {
+          target: "generatingProof",
+          actions: [
+            (context) => {
+              delete context.pin;
+            },
+          ],
+        },
+      },
+    },
+    generatingProof: { on: { GENERATED: "verify" } },
+    verify: { on: { SUBMIT: "verifying" } },
+    verifying: {
+      on: {
+        VERIFIED: {
+          target: "display",
+          actions: [
+            (context) => {
+              context.upperText = "Verified by European Union";
+            },
+          ],
+        },
+      },
+    },
   },
 };
 
@@ -28,26 +78,19 @@ export function Interface() {
   const { address, isConnected } = useAccount();
   const { status: ensStatus, data: ensName } = useEnsName({ address });
   const { current, send } = useStateMachine(machineConfig);
-  const [hack_text, hack_set] = useState<string | undefined>(undefined);
 
+  // hacky hack of hackiness
   useEffect(() => {
     let handle: any = undefined;
 
     if (
-      ["insertCard", "enterPin", "generatingProof", "verifying"].includes(
-        current
+      ["insertCard", "generatingProof", "verifying", "signing"].includes(
+        current.id
       )
     ) {
       const TIME = 3500;
-      const event = Object.keys(machineConfig.states[current].on)[0];
-      if (event === "verified") {
-        handle = setTimeout(() => {
-          send(event);
-          hack_set("Verified by European Union");
-        }, TIME);
-      } else {
-        handle = setTimeout(() => send(event), TIME);
-      }
+      const event = Object.keys(machineConfig.states[current.id].on)[0];
+      handle = setTimeout(() => send(event), TIME);
     }
 
     return () => clearTimeout(handle);
@@ -55,19 +98,18 @@ export function Interface() {
 
   const isLoading =
     ensStatus === "loading" ||
-    current === "verifying" ||
-    current === "generatingProof";
+    ["verifying", "generatingProof", "signing"].includes(current.id);
 
   let sub = null;
-  switch (current) {
+  switch (current.id) {
     case "display":
       if (!isConnected) {
         sub = <ConnectButton />;
-      } else if (hack_text === undefined) {
+      } else if (current.context?.upperText === undefined) {
         sub = (
           <Button
             content={<>Link your identity</>}
-            onClick={() => send("link")}
+            onClick={() => send("LINK")}
           />
         );
       }
@@ -82,10 +124,27 @@ export function Interface() {
       break;
     case "enterPin":
       sub = (
-        <StatusText
-          main="Enter your PIN"
-          subText="Enter your qualified signature PIN"
-        />
+        <>
+          <StatusText
+            main="Enter your PIN"
+            subText="Enter your qualified signature PIN"
+          />
+          <PinInput
+            length={4}
+            onSubmit={(pin) => send({ id: "ENTERED", pin })}
+          />
+        </>
+      );
+      break;
+    case "signing":
+      sub = (
+        <>
+          <StatusText
+            main="Communicating with ID"
+            subText="Communicating with your ID to confirm your identity"
+          />
+          <PinInput length={4} disabled={true} value={current.context?.pin} />
+        </>
       );
       break;
     case "generatingProof":
@@ -100,7 +159,7 @@ export function Interface() {
       sub = (
         <FoxButton
           content={<>Verify on-chain</>}
-          onClick={() => send("submit")}
+          onClick={() => send("SUBMIT")}
         />
       );
       break;
@@ -112,6 +171,8 @@ export function Interface() {
         />
       );
       break;
+    default:
+      console.error(`State "${current.id}" not handled`);
   }
 
   let ens = ensName ?? address ?? "";
@@ -147,9 +208,9 @@ export function Interface() {
       />
       <div className="centered">
         <Card
-          upperText={hack_text ?? ""}
+          upperText={current.context?.upperText}
           ens={ens}
-          //rotate float
+          trackMouse
           float
         />
         <div className="belowCentered">{sub}</div>

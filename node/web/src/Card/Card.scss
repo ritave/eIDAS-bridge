@@ -3,6 +3,10 @@
 // Credit cards are 3.375 inches wide by 2.125 inches high.
 $ratio: math.div(3.375, 2.125);
 
+.perspective {
+  perspective: 800px;
+}
+
 .card {
   border: 1.16px solid #cbcbcb;
 
@@ -22,6 +26,7 @@ $ratio: math.div(3.375, 2.125);
   font-weight: 400;
 
   color: #ffffff;
+  //animation: spin 2s ease-in-out normal;
 }
 
 .rotate {
@@ -75,6 +80,8 @@ $ratio: math.div(3.375, 2.125);
   top: 2rem;
   left: 2rem;
   margin: 0;
+
+  text-shadow: -1px -1px rgba(0, 0, 0, 0.5), 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 @keyframes rotateAnimation {
