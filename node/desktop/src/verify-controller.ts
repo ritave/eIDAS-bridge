@@ -5,7 +5,7 @@ import path from "path";
 import readline from "readline";
 
 export declare interface VerifyController {
-  on(event: "out", listener: (data: object) => void): this;
+  on(event: "out", listener: (data: string) => void): this;
 }
 
 export class VerifyController extends EventEmitter {
@@ -14,13 +14,13 @@ export class VerifyController extends EventEmitter {
   start() {
     this.kill();
 
-    console.log("verify start");
+    console.log("Verify, start");
 
     const cwd = path.resolve(__dirname, "crypto");
     const bin = path.join(cwd, "bridge.bin");
     const args =
       "-pkey EIDAS.G16.pk -system EIDAS.G16.ccs -vkey EIDAS.G16.vk".split(" ");
-    console.log("verify, starting", bin, args);
+    console.log("Verify, starting", bin, args);
 
     this.child = spawn(bin, args, {
       windowsHide: true,
@@ -29,19 +29,19 @@ export class VerifyController extends EventEmitter {
     readline
       .createInterface({ input: this.child.stdout, terminal: false })
       .on("line", (line) => {
-        console.log("Verify, line:", line);
-        this.emit("out", JSON.parse(line));
+        console.log("Verify, out:", line);
+        this.emit("out", line);
       });
   }
 
   send(data: string) {
-    console.log("verify send:", data);
+    console.log("Verify, in:", data);
     assert(this.child !== null);
     this.child.stdin.write(`${data}\n`);
   }
 
   kill() {
-    console.log("verify kill");
+    console.log("Verify, kill");
     this.child?.kill();
     this.child = null;
   }
