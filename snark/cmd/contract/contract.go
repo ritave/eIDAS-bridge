@@ -4,6 +4,7 @@ import (
 	"bytes"
 	stdcrypto "crypto"
 	stdecdsa "crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"flag"
 	"fmt"
@@ -11,9 +12,12 @@ import (
 	"os"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/constraint"
+	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
@@ -238,7 +242,18 @@ func run(ev *ethVerifier) error {
 	}
 
 	// prove
-	proof, err := groth16.Prove(ev.r1cs, ev.pk, witness)
+	proof, err := groth16.Prove(ev.r1cs, ev.pk, witness, backend.WithSolverOptions(solver.OverrideHint(
+		solver.GetHintID(cs.Bsb22CommitmentComputePlaceholder), func(mod *big.Int, input, output []*big.Int) error {
+			toHash := make([]byte, 0, (1+mod.BitLen()/8)*len(input))
+			for _, in := range input {
+				inBytes := in.Bytes()
+				toHash = append(toHash, inBytes[:]...)
+			}
+			hsh := sha256.New().Sum(toHash)
+			output[0].SetBytes(hsh)
+			output[0].Mod(output[0], mod)
+			return nil
+		})))
 	if err != nil {
 		return fmt.Errorf("prove: %w", err)
 	}
