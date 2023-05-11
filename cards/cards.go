@@ -57,6 +57,10 @@ func (ctx *Config) EnumerateTokens() ([]*Token, error) {
 	return ret, nil
 }
 
+func (ctx *Config) SetPIN(pin string) {
+	ctx.PIN = pin
+}
+
 // Filter Tokens given hint. If hint is "", then doesn't filter and return as is.
 func (ctx *Config) FilterTokens(hint string, in []*Token) []*Token {
 	if hint == "" {
