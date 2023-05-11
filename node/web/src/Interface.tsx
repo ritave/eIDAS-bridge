@@ -4,7 +4,13 @@ import { MetamaskBoxAnimation } from "./fox/MetamaskBoxAnimation";
 import { Card } from "./Card/Card";
 import GridLoader from "react-spinners/GridLoader";
 
-import { mainnet, useAccount, useContractRead, useEnsName } from "wagmi";
+import {
+  mainnet,
+  useAccount,
+  useContractRead,
+  useEnsAddress,
+  useEnsName,
+} from "wagmi";
 import { ConnectButton } from "./ConnectButton";
 import { MachineConfig, useStateMachine } from "./useStateMachine";
 import { StatusText } from "./StatusText/StatusText";
@@ -16,6 +22,7 @@ import { ReadyState } from "react-use-websocket/dist/lib/constants";
 import { sepolia, writeContract, waitForTransaction } from "@wagmi/core";
 import { DEPLOY, METADATA } from "./contract";
 import { useHash } from "./useHash";
+import { RevokeButton } from "./RevokeButton/RevokeButton";
 
 type Proof = {
   A: [bigint, bigint];
@@ -26,7 +33,10 @@ type Proof = {
 
 type EnteredEvent = { id: "ENTERED"; pin: string };
 type GeneratedEvent = { id: "GENERATED"; proof: Proof };
-type VerifyEvent = { id: "VERIFY"; hash: string };
+type SubmitEvent = { id: "VERIFY" | "REVOKE"; hash: string };
+const submitAction = (context: Context, event: Event) => {
+  context.hash = (event as SubmitEvent).hash;
+};
 
 type Event =
   | { id: "LINK" }
@@ -34,9 +44,10 @@ type Event =
   | EnteredEvent
   | { id: "SIGNING" }
   | GeneratedEvent
-  | VerifyEvent
+  | SubmitEvent
   | { id: "VERIFYING" }
-  | { id: "DISPLAY" };
+  | { id: "DISPLAY" }
+  | { id: "REVOKED" };
 
 type Context = {
   pin?: string;
@@ -49,7 +60,13 @@ const machineConfig: MachineConfig<Event, Context> = {
   initial: "display",
   context: {},
   states: {
-    display: { on: { LINK: "insertCard" } },
+    display: {
+      on: {
+        LINK: "insertCard",
+        REVOKE: { target: "revoking", actions: [submitAction] },
+      },
+    },
+    revoking: { on: { REVOKED: "display" } },
     insertCard: { on: { INSERTED: "enterPin" } },
     enterPin: {
       on: {
@@ -91,11 +108,7 @@ const machineConfig: MachineConfig<Event, Context> = {
       on: {
         VERIFY: {
           target: "verifying",
-          actions: [
-            (context, event) => {
-              context.hash = (event as VerifyEvent).hash;
-            },
-          ],
+          actions: [submitAction],
         },
       },
     },
@@ -113,7 +126,15 @@ export function Interface() {
   const [hash, setHash] = useHash();
   const { address, isConnected } = useAccount();
 
-  const displayAddress = hash === "" ? address : hash.slice(1);
+  const walletOrHash =
+    hash === "" || hash.endsWith(".eth") ? address : hash.slice(1);
+
+  const { data: ensAddress, isLoading: isEnsAddressLoading } = useEnsAddress({
+    name: hash.endsWith(".eth") ? hash.slice(1) : undefined,
+    chainId: mainnet.id,
+  });
+
+  const displayAddress = ensAddress ?? walletOrHash;
 
   const { data: isVerified, isLoading: isVerifiedLoading } = useContractRead({
     abi: METADATA.output.abi,
@@ -122,6 +143,7 @@ export function Interface() {
     functionName: "isVerified",
     args: [displayAddress as any],
     enabled: displayAddress !== undefined,
+    watch: true,
   });
 
   const { data: ensName, isLoading: isEnsLoading } = useEnsName({
@@ -157,34 +179,61 @@ export function Interface() {
   );
 
   const isLoading =
+    isEnsAddressLoading ||
     isVerifiedLoading ||
     isEnsLoading ||
     wsReady !== ReadyState.OPEN ||
-    ["verifying", "generatingProof", "signing"].includes(current.id);
+    ["verifying", "generatingProof", "signing", "revoking"].includes(
+      current.id
+    );
 
   let sub = null;
   switch (current.id) {
     case "display":
       if (!isConnected) {
         sub = <ConnectButton />;
-      } else if (
-        current.context?.upperText === undefined &&
-        wsReady === ReadyState.OPEN &&
-        displayAddress === address &&
-        !isVerified
-      ) {
-        sub = (
-          <Button
-            content={<>Link your identity</>}
-            onClick={() => {
-              send("LINK");
-              wsSend({ id: "LINK" });
-            }}
-          />
-        );
       } else {
-        sub = <></>;
+        if (
+          wsReady === ReadyState.OPEN &&
+          displayAddress === address &&
+          !isVerified
+        ) {
+          sub = (
+            <Button
+              content={<>Link your identity</>}
+              onClick={() => {
+                send("LINK");
+                wsSend({ id: "LINK" });
+              }}
+            />
+          );
+        } else if (displayAddress === address && isVerified) {
+          sub = (
+            <RevokeButton
+              onClick={async () => {
+                const { hash } = await writeContract({
+                  address: DEPLOY.sepolia,
+                  abi: METADATA.output.abi,
+                  functionName: "revoke",
+                  chainId: sepolia.id,
+                });
+                send({ id: "REVOKE", hash });
+                await waitForTransaction({ chainId: sepolia.id, hash });
+                setHash(address!);
+                send("REVOKED");
+              }}
+            />
+          );
+        }
       }
+      break;
+    case "revoking":
+      sub = (
+        <StatusText
+          main="Revoking identity"
+          subText="Revoking identity for demo purpouses"
+        />
+      );
       break;
     case "insertCard":
       sub = (

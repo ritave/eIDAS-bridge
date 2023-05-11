@@ -39,7 +39,7 @@ export class WsServer {
 
   async start(opts: {
     port: number;
-    cert: CertificateCreationResult;
+    cert?: CertificateCreationResult;
   }): Promise<void> {
     //assert(this.server === null && this.wss === null);
     assert(this.wss === null);

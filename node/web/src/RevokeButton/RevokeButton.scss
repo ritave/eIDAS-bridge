@@ -1,0 +1,19 @@
+@use "sass:color";
+
+@import "../variables.scss";
+
+$color: #da3f3f;
+
+button.revoke {
+  border: 1px solid $color;
+  background-color: rgba(0, 0, 0, 0);
+  color: $color;
+}
+
+button.revoke:hover {
+  background-color: rgba($color, 0.15);
+}
+
+button.revoke:active {
+  background-color: rgba($color, 0.3);
+}
