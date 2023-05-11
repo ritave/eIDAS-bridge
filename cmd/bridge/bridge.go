@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,8 +11,11 @@ import (
 	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs"
 	"github.com/consensys/gnark/logger"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
@@ -22,6 +26,9 @@ import (
 )
 
 var libLoc string
+var ccsLoc string
+var pkLoc string
+var vkLoc string
 
 func init() {
 	logger.Disable()
@@ -29,10 +36,13 @@ func init() {
 
 func main() {
 	flag.StringVar(&libLoc, "opensc", "/opt/homebrew/lib/opensc-pkcs11.so", "location of opensc library")
+	flag.StringVar(&ccsLoc, "system", "EIDAS.G16.ccs", "location of SNARK circuit")
+	flag.StringVar(&pkLoc, "pkey", "EIDAS.G16.pk", "location of proving key")
+	flag.StringVar(&vkLoc, "vkey", "EIDAS.G16.vk", "location of verifying key")
 	flag.Parse()
 	var tokens []*cards.Token
 	var err error
-	fccs, err := os.Open("contract/EIDAS.G16.ccs")
+	fccs, err := os.Open(ccsLoc)
 	if err != nil {
 		fmt.Println("CCSF", err)
 		return
@@ -44,7 +54,7 @@ func main() {
 		fmt.Println("CCS", err)
 		return
 	}
-	fpk, err := os.Open("contract/EIDAS.G16.pk")
+	fpk, err := os.Open(pkLoc)
 	if err != nil {
 		fmt.Println("PKF", err)
 		return
@@ -56,7 +66,7 @@ func main() {
 		fmt.Println("PK", err)
 		return
 	}
-	fvk, err := os.Open("contract/EIDAS.G16.vk")
+	fvk, err := os.Open(vkLoc)
 	if err != nil {
 		fmt.Println("VKF", err)
 		return
@@ -134,7 +144,18 @@ func main() {
 	}
 
 	// prove
-	proof, err := groth16.Prove(ccs, pk, witness)
+	proof, err := groth16.Prove(ccs, pk, witness, backend.WithSolverOptions(solver.OverrideHint(
+		solver.GetHintID(cs.Bsb22CommitmentComputePlaceholder), func(mod *big.Int, input, output []*big.Int) error {
+			toHash := make([]byte, 0, (1+mod.BitLen()/8)*len(input))
+			for _, in := range input {
+				inBytes := in.Bytes()
+				toHash = append(toHash, inBytes[:]...)
+			}
+			hsh := sha256.New().Sum(toHash)
+			output[0].SetBytes(hsh)
+			output[0].Mod(output[0], mod)
+			return nil
+		})))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -177,13 +198,12 @@ func main() {
 	for i := range assignment.Challenge {
 		resp.Input[i] = new(big.Int).SetUint64(uint64(assignment.Challenge[i].Val.(uint8)))
 	}
-	respm, err := json.Marshal(resp)
+	tosend, err := json.Marshal(Message{"GENERATED", resp})
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Printf("{ \"id\": \"GENERATED\", \"proof\": \"%s\" }\n", respm)
+	fmt.Println(string(tosend))
 }
 
 type Response struct {
@@ -191,4 +211,9 @@ type Response struct {
 	B     [2][2]*big.Int
 	C     [2]*big.Int
 	Input [32]*big.Int
+}
+
+type Message struct {
+	ID    string   `json:"id"`
+	Proof Response `json:"proof"`
 }
