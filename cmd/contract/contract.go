@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	NAME = "../../contract/EIDAS.G16"
+	NAME = "contract/EIDAS.G16"
 )
 
 var (
