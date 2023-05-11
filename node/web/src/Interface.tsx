@@ -167,7 +167,10 @@ export function Interface() {
               wsSend({
                 id: "SIGN",
                 pin,
-                challenge: address?.slice(2, 34), // we can only do 32 byte challenge proofs for now
+                // we can only do 16 bytes challenge for the hackathon
+                // non-checksummed lower 16 bytes of the address,
+                //   makes it way easier to verify on-chain
+                challenge: address?.slice(-32).toLowerCase(),
               });
             }}
           />
