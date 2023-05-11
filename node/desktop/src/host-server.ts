@@ -1,8 +1,5 @@
 import https from "https";
-import pem, {
-  CertificateCreationResult,
-  CertificateCreationOptions,
-} from "pem";
+import { CertificateCreationResult } from "pem";
 import { promisify } from "util";
 import Static from "node-static";
 import assert from "assert";
@@ -10,24 +7,20 @@ import assert from "assert";
 export class HttpServer {
   server: https.Server | null = null;
 
-  async start(opts: { port: number; public: string }): Promise<void> {
+  async start(opts: {
+    port: number;
+    public: string;
+    cert: CertificateCreationResult;
+  }): Promise<void> {
     assert(this.server === null);
-    const cert = await (
-      promisify(pem.createCertificate) as (
-        _: CertificateCreationOptions
-      ) => Promise<CertificateCreationResult>
-    )({
-      days: 7,
-      selfSigned: true,
-    });
 
     const staticServe = new Static.Server(opts.public);
 
     this.server = https
       .createServer(
         {
-          key: cert.clientKey,
-          cert: cert.certificate,
+          key: opts.cert.clientKey,
+          cert: opts.cert.certificate,
         },
         (req, res) => {
           req

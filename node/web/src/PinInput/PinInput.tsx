@@ -53,7 +53,6 @@ export function PinInput({ length, onSubmit, disabled, value }: Props) {
 
   const inputs = [];
   for (let i = 0; i < myLength; i++) {
-    console.log(pin, pin[i]);
     refs.current[i] = null;
     inputs.push(
       <input

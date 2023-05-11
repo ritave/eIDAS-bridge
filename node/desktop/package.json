@@ -27,6 +27,7 @@
     "@electron-forge/plugin-webpack": "^6.1.1",
     "@types/node-static": "^0.7.7",
     "@types/pem": "^1.9.6",
+    "@types/ws": "^8.5.4",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "@vercel/webpack-asset-relocator-loader": "1.7.3",
@@ -45,6 +46,7 @@
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
     "node-static": "^0.7.11",
-    "pem": "^1.14.7"
+    "pem": "^1.14.7",
+    "ws": "^8.13.0"
   }
 }

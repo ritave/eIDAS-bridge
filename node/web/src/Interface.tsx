@@ -8,10 +8,12 @@ import { useAccount, useEnsName } from "wagmi";
 import { ConnectButton } from "./ConnectButton";
 import { MachineConfig, useStateMachine } from "./useStateMachine";
 import { StatusText } from "./StatusText/StatusText";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "./Button/Button";
 import { FoxButton } from "./FoxButton/FoxButton";
 import { PinInput } from "./PinInput/PinInput";
+import { useWebSocket } from "react-use-websocket/dist/lib/use-websocket";
+import { ReadyState } from "react-use-websocket/dist/lib/constants";
 
 type EnteredEvent = { id: "ENTERED"; pin: string };
 
@@ -78,16 +80,20 @@ export function Interface() {
   const { address, isConnected } = useAccount();
   const { status: ensStatus, data: ensName } = useEnsName({ address });
   const { current, send } = useStateMachine(machineConfig);
+  const onMessage = (e: MessageEvent) => {
+    const message = JSON.parse(e.data);
+    send(message);
+  };
+  const { sendJsonMessage: wsSend, readyState: wsReady } = useWebSocket(
+    "ws://localhost:8081",
+    { onMessage }
+  );
 
   // hacky hack of hackiness
   useEffect(() => {
     let handle: any = undefined;
 
-    if (
-      ["insertCard", "generatingProof", "verifying", "signing"].includes(
-        current.id
-      )
-    ) {
+    if (["verifying"].includes(current.id)) {
       const TIME = 3500;
       const event = Object.keys(machineConfig.states[current.id].on)[0];
       handle = setTimeout(() => send(event), TIME);
@@ -98,6 +104,7 @@ export function Interface() {
 
   const isLoading =
     ensStatus === "loading" ||
+    wsReady !== ReadyState.OPEN ||
     ["verifying", "generatingProof", "signing"].includes(current.id);
 
   let sub = null;
@@ -105,11 +112,17 @@ export function Interface() {
     case "display":
       if (!isConnected) {
         sub = <ConnectButton />;
-      } else if (current.context?.upperText === undefined) {
+      } else if (
+        current.context?.upperText === undefined &&
+        wsReady === ReadyState.OPEN
+      ) {
         sub = (
           <Button
             content={<>Link your identity</>}
-            onClick={() => send("LINK")}
+            onClick={() => {
+              send("LINK");
+              wsSend({ id: "LINK" });
+            }}
           />
         );
       }
@@ -131,7 +144,10 @@ export function Interface() {
           />
           <PinInput
             length={4}
-            onSubmit={(pin) => send({ id: "ENTERED", pin })}
+            onSubmit={(pin) => {
+              send({ id: "ENTERED", pin });
+              wsSend({ id: "SIGN", pin, challenge: address });
+            }}
           />
         </>
       );
