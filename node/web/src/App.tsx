@@ -10,6 +10,7 @@ import { infuraProvider } from "wagmi/providers/infura";
 import { publicProvider } from "@wagmi/core/providers/public";
 import { MetaMaskConnector } from "wagmi/connectors/metaMask";
 import { Interface } from "./Interface";
+import { useHash } from "./useHash";
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
   [sepolia, mainnet],

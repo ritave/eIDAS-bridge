@@ -4,11 +4,10 @@ import { MetamaskBoxAnimation } from "./fox/MetamaskBoxAnimation";
 import { Card } from "./Card/Card";
 import GridLoader from "react-spinners/GridLoader";
 
-import { mainnet, useAccount, useEnsName, useWaitForTransaction } from "wagmi";
+import { mainnet, useAccount, useContractRead, useEnsName } from "wagmi";
 import { ConnectButton } from "./ConnectButton";
 import { MachineConfig, useStateMachine } from "./useStateMachine";
 import { StatusText } from "./StatusText/StatusText";
-import { useEffect } from "react";
 import { Button } from "./Button/Button";
 import { FoxButton } from "./FoxButton/FoxButton";
 import { PinInput } from "./PinInput/PinInput";
@@ -16,6 +15,7 @@ import { useWebSocket } from "react-use-websocket/dist/lib/use-websocket";
 import { ReadyState } from "react-use-websocket/dist/lib/constants";
 import { sepolia, writeContract, waitForTransaction } from "@wagmi/core";
 import { DEPLOY, METADATA } from "./contract";
+import { useHash } from "./useHash";
 
 type Proof = {
   A: [bigint, bigint];
@@ -103,11 +103,6 @@ const machineConfig: MachineConfig<Event, Context> = {
       on: {
         VERIFIED: {
           target: "display",
-          actions: [
-            (context) => {
-              context.upperText = "Verified by European Union";
-            },
-          ],
         },
       },
     },
@@ -115,9 +110,22 @@ const machineConfig: MachineConfig<Event, Context> = {
 };
 
 export function Interface() {
+  const [hash, setHash] = useHash();
   const { address, isConnected } = useAccount();
-  const { status: ensStatus, data: ensName } = useEnsName({
-    address,
+
+  const displayAddress = hash === "" ? address : hash.slice(1);
+
+  const { data: isVerified, isLoading: isVerifiedLoading } = useContractRead({
+    abi: METADATA.output.abi,
+    address: DEPLOY.sepolia,
+    chainId: sepolia.id,
+    functionName: "isVerified",
+    args: [displayAddress as any],
+    enabled: displayAddress !== undefined,
+  });
+
+  const { data: ensName, isLoading: isEnsLoading } = useEnsName({
+    address: displayAddress as any,
     chainId: mainnet.id,
   });
   const { current, send } = useStateMachine(machineConfig);
@@ -148,21 +156,9 @@ export function Interface() {
     { onMessage }
   );
 
-  // hacky hack of hackiness
-  /*   useEffect(() => {
-    let handle: any = undefined;
-
-    if (["verifying"].includes(current.id)) {
-      const TIME = 3500;
-      const event = Object.keys(machineConfig.states[current.id].on)[0];
-      handle = setTimeout(() => send(event), TIME);
-    }
-
-    return () => clearTimeout(handle);
-  }, [current, send]); */
-
   const isLoading =
-    ensStatus === "loading" ||
+    isVerifiedLoading ||
+    isEnsLoading ||
     wsReady !== ReadyState.OPEN ||
     ["verifying", "generatingProof", "signing"].includes(current.id);
 
@@ -173,7 +169,9 @@ export function Interface() {
         sub = <ConnectButton />;
       } else if (
         current.context?.upperText === undefined &&
-        wsReady === ReadyState.OPEN
+        wsReady === ReadyState.OPEN &&
+        displayAddress === address &&
+        !isVerified
       ) {
         sub = (
           <Button
@@ -184,6 +182,8 @@ export function Interface() {
             }}
           />
         );
+      } else {
+        sub = <></>;
       }
       break;
     case "insertCard":
@@ -253,6 +253,7 @@ export function Interface() {
             });
             send({ id: "VERIFY", hash });
             await waitForTransaction({ chainId: sepolia.id, hash });
+            setHash(address!);
             send("VERIFIED");
           }}
         />
@@ -270,7 +271,7 @@ export function Interface() {
       console.error(`State "${current.id}" not handled`);
   }
 
-  let ens = ensName ?? address ?? "";
+  let ens = ensName ?? displayAddress ?? "";
   if (ens.length > 12) {
     ens = ens.slice(0, 9) + "...";
   }
@@ -303,7 +304,7 @@ export function Interface() {
       />
       <div className="centered">
         <Card
-          upperText={current.context?.upperText}
+          upperText={isVerified ? "Verified by European Union" : undefined}
           ens={ens}
           trackMouse
           float
