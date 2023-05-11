@@ -9,7 +9,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/ritave/eIDAS-bridge/p384"
+	"github.com/ritave/eIDAS-bridge/snark/p384"
 )
 
 func AssertCertSubjectPubkey(uapi *uints.BinaryField[uints.U32], tbsCertificate []uints.U8, subject []uints.U8, pubkey []uints.U8) error {

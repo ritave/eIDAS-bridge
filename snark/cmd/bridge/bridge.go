@@ -20,9 +20,9 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/ritave/eIDAS-bridge/cards"
-	"github.com/ritave/eIDAS-bridge/circuits"
-	"github.com/ritave/eIDAS-bridge/p384"
+	"github.com/ritave/eIDAS-bridge/snark/cards"
+	"github.com/ritave/eIDAS-bridge/snark/circuits"
+	"github.com/ritave/eIDAS-bridge/snark/p384"
 )
 
 var libLoc string

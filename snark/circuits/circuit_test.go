@@ -12,9 +12,9 @@ import (
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
 	"github.com/consensys/gnark/test"
-	"github.com/ritave/eIDAS-bridge/cards"
-	"github.com/ritave/eIDAS-bridge/cert"
-	"github.com/ritave/eIDAS-bridge/p384"
+	"github.com/ritave/eIDAS-bridge/snark/cards"
+	"github.com/ritave/eIDAS-bridge/snark/cert"
+	"github.com/ritave/eIDAS-bridge/snark/p384"
 )
 
 func TestCircuit(t *testing.T) {

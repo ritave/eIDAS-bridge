@@ -23,10 +23,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ritave/eIDAS-bridge/cards"
-	"github.com/ritave/eIDAS-bridge/circuits"
-	"github.com/ritave/eIDAS-bridge/p384"
-	"github.com/ritave/eIDAS-bridge/verifier"
+	"github.com/ritave/eIDAS-bridge/snark/cards"
+	"github.com/ritave/eIDAS-bridge/snark/circuits"
+	"github.com/ritave/eIDAS-bridge/snark/p384"
+	"github.com/ritave/eIDAS-bridge/snark/verifier"
 	"golang.org/x/exp/slog"
 )
 

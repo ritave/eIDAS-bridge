@@ -1,4 +1,4 @@
-module github.com/ritave/eIDAS-bridge
+module github.com/ritave/eIDAS-bridge/snark
 
 go 1.20
 
@@ -85,4 +85,3 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/consensys/gnark => ../../zk/gnark
