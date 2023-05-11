@@ -1,5 +1,5 @@
 contract/EIDAS.G16.sol:
-	go run cmd/contract/contract.go generate
+	go run github.com/ritave/eIDAS-bridge/cmd/contract generate
 
 contract/Verifier.abi: contract/EIDAS.G16.sol
 	solc --overwrite --abi contract/EIDAS.G16.sol -o contract/build
@@ -23,4 +23,4 @@ all: verifier/verifier.go
 
 .PHONY: test
 test: verifier/verifier.go
-	go run cmd/contract/contract.go test
+	go run github.com/ritave/eIDAS-bridge/cmd/contract test
