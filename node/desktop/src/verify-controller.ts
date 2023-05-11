@@ -3,7 +3,6 @@ import assert from "assert";
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import path from "path";
 import readline from "readline";
-import util from "util";
 
 export declare interface VerifyController {
   on(event: "out", listener: (data: object) => void): this;
@@ -26,8 +25,7 @@ export class VerifyController extends EventEmitter {
     readline
       .createInterface({ input: this.child.stdout, terminal: false })
       .on("line", (line) => {
-        console.log("Verify, line:", line, typeof line);
-        console.log(util.inspect(line, true, Infinity, true));
+        console.log("Verify, line:", line);
         this.emit("out", JSON.parse(line));
       });
   }
