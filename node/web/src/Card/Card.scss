@@ -1,0 +1,110 @@
+@use "sass:math";
+@import "../variables.scss";
+// Credit cards are 3.375 inches wide by 2.125 inches high.
+$ratio: math.div(3.375, 2.125);
+
+.perspective {
+  perspective: 800px;
+}
+
+.card {
+  border: 1.16px solid #cbcbcb;
+
+  box-sizing: border-box;
+
+  width: $card_height * $ratio;
+  height: $card_height;
+
+  background: rgba(126, 126, 126, 0.5);
+  backdrop-filter: blur(9.29412px);
+  /* Note: backdrop-filter has minimal browser support */
+
+  border-radius: 9.29412px;
+
+  font-family: "OCR B Std";
+  font-style: normal;
+  font-weight: 400;
+
+  color: #ffffff;
+  //animation: spin 2s ease-in-out normal;
+}
+
+.rotate {
+  //transform: rotateY(45deg);
+  //animation: spin 7s linear infinite, floatUp 3s ease-in-out infinite;
+  //animation: spin 7s linear infinite;
+  //animation: floatUp 4s ease-in-out infinite;
+  animation: spin 10s linear infinite;
+}
+
+.float {
+  animation: floatUp 4s ease-in-out infinite;
+}
+
+.chip-group {
+  position: absolute;
+  left: 2rem;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+.connectivity {
+  padding-left: 10px;
+}
+
+.fox {
+  mix-blend-mode: luminosity;
+  //opacity: 0.75;
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+}
+
+.ens {
+  text-transform: uppercase;
+  // can't put opacity in blurred div
+  opacity: 0.5;
+  letter-spacing: 0.105em;
+  font-size: 1.8rem;
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+  margin: 0;
+}
+
+.upper-text {
+  letter-spacing: -0.09em;
+  opacity: 0.5;
+  font-size: 1.6rem;
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  margin: 0;
+
+  text-shadow: -1px -1px rgba(0, 0, 0, 0.5), 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes rotateAnimation {
+  from {
+    transform: rotateY(45deg);
+  }
+  to {
+    transform: rotateY(225deg);
+  }
+}
+
+@keyframes spin {
+  100% {
+    -webkit-transform: rotateY(360deg);
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes floatUp {
+  50% {
+    transform: translate(0, -20px);
+  }
+  100% {
+    transform: translate(0px);
+  }
+}

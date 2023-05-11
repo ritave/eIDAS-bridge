@@ -1,0 +1,29 @@
+@import "../variables.scss";
+
+.statusText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: $button_width;
+}
+
+.statusText > .mainText {
+  font-weight: 600;
+  font-size: 1.6rem;
+  //line-height: 1.9rem;
+  text-align: center;
+  color: #ffffff;
+}
+
+.statusText > .subText {
+  font-weight: 500;
+  font-size: 1.6rem;
+  //line-height: 19px;
+  text-align: center;
+  color: #8f8f8f;
+  margin-top: 8px;
+}
+
+.statusText > p {
+  margin: 0;
+}

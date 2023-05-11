@@ -1,0 +1,26 @@
+@use "sass:math";
+@import "./variables.scss";
+.logo {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  height: 30px;
+}
+
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.belowCentered {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, math.div($card_height, 2) + $button_padding);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}

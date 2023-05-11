@@ -1,0 +1,36 @@
+@import "../variables.scss";
+
+button {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  gap: 8px;
+
+  width: $button_width;
+  height: $button_height;
+
+  background: #ffffff;
+  border-radius: 8px;
+  border: 0;
+  font: inherit;
+  color: #101010;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 100%;
+  /* Corrects font smoothing for webkit */
+  -webkit-font-smoothing: inherit;
+  -moz-osx-font-smoothing: inherit;
+
+  /* Corrects inability to style clickable `input` types in iOS */
+  -webkit-appearance: none;
+}
+
+button:hover {
+  background: #dedede;
+}
+
+button:active {
+  background: #b1b1b1;
+}
