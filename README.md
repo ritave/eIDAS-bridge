@@ -1,10 +1,14 @@
 # eIDAS-bridge
 
-## Dependencies
+## Compilation
+
+Install dependencies
 
 ```
 brew install openssl yubico-piv-tool opensc pcsc-lite
 ```
+
+Create an [Infura project](https://www.infura.io/) and set up `REACT_PROJECT_INFURA_ID` in [`.env` file at `./node/web/`](./node/web/.env).
 
 ## Yubikey preparation
 
